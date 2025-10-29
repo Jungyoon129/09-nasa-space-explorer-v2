@@ -50,40 +50,43 @@ h1 {
   padding: 0 20px;
 }
 
-/* Inputs and buttons */
 input[type="date"],
 button {
   font-family: Arial, sans-serif;
   font-weight: normal;
   color: #666;
-  padding: 10px 15px;
+  padding: 8px 12px;   /* 좀 더 아담하게 */
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 16px;
-  line-height: 1.4;
+  font-size: 14px;     /* 글자 크기도 줄임 */
+  line-height: 1.3;
   width: 100%;
 }
 
-/* Button specific */
 button {
-  background-color: #d3d3d3;
-  color: black;
+  background-color: #0B3D91; /* NASA Blue */
+  color: white;
   cursor: pointer;
+  font-weight: 600;
 }
 button:hover {
-  background-color: #bfbfbf;
+  background-color: #082b66;
 }
 
 /* Stack horizontally on wider screens */
 @media (min-width: 600px) {
   .filters {
     flex-direction: row;
+    justify-content: center;  /* 중앙 정렬 */
+    gap: 10px;
     padding: 0;
   }
-  
+
   input[type="date"],
   button {
-    width: auto;
+    width: 160px;   /* 두 날짜칸 + 버튼 전부 동일한 크기 */
+    height: 40px;   /* 세로도 통일 */
+    font-size: 14px;
   }
 }
 
@@ -194,3 +197,126 @@ button:hover {
 .modal-expl { padding: 14px 16px 18px; background: #001a3d; line-height: 1.5; }
 .modal-note { margin: 10px 0 0; font-size: 0.9rem; opacity: .9; }
 .modal-note a { color: #9ec3ff; text-decoration: underline; }
+/* ===== NASA Branding Overrides (append at the very end) ===== */
+:root{
+  --nasa-blue: #0032A0;  /* Official NASA Blue */
+  --nasa-red:  #E4002B;  /* Official NASA Red */
+  --nasa-white:#FFFFFF;
+  --nasa-gray: #F1F1F1;
+}
+
+/* Base */
+body{
+  background-color: var(--nasa-gray);
+}
+
+/* Header */
+.site-header{
+  margin-bottom: 24px;
+}
+.site-header h1{
+  color: var(--nasa-blue);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+/* Controls */
+input[type="date"]{
+  border: 1px solid #cfd7ff;
+  border-radius: 6px;
+  padding: 10px 14px;
+}
+
+/* Button */
+button{
+  background-color: var(--nasa-blue);
+  color: var(--nasa-white);
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  transition: transform .08s ease, box-shadow .18s ease, background .18s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+}
+button:hover{
+  background-color: #002a82; /* darker blue hover */
+  box-shadow: 0 6px 14px rgba(0,0,0,.18);
+}
+button:active{
+  transform: translateY(1px);
+}
+button:focus{
+  outline: 3px solid rgba(228,0,43,.35); /* nasa red focus ring */
+  outline-offset: 2px;
+}
+
+/* Loading banner */
+.loading{
+  background: #eef2ff;
+  border: 1px solid #cbd5ff;
+  color: var(--nasa-blue);
+  border-radius: 8px;
+}
+
+/* Cards */
+.gallery-item{
+  border: 2px solid rgba(0,50,160,.12);
+  transition: transform .15s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.gallery-item:hover{
+  transform: translateY(-3px);
+  border-color: rgba(0,50,160,.35);
+  box-shadow: 0 10px 18px rgba(0,0,0,.18);
+}
+
+/* Modal */
+.modal-dialog{
+  background: var(--nasa-blue);
+  color: var(--nasa-white);
+}
+.modal-header{
+  background: #002a82; /* darker blue header */
+  color: var(--nasa-white);
+}
+.modal-close{
+  background: var(--nasa-red);
+  color: #fff;
+}
+.modal-close:hover{
+  filter: brightness(.95);
+}
+.modal-body{
+  background: #001743; /* deep space */
+}
+.modal-expl{
+  background: #001e59;
+  border-top: 1px solid rgba(255,255,255,.12);
+}
+.modal-note a{
+  color: #b7d0ff;
+  text-decoration: underline;
+}
+
+/* Video placeholder tint */
+.video-placeholder{
+  background: #0b0f1a;
+  color: #e5ecff;
+}
+/* Random Space Fact */
+.space-fact{
+  text-align:center;
+  font-size:14px;
+  font-weight:700;
+  color:#0B3D91;
+  background:#eef2ff;
+  border:1px solid #cbd5ff;
+  padding:10px 12px;
+  border-radius:8px;
+  margin:0 20px 16px;
+}
+/* Hover Zoom on gallery images */
+.gallery-item img{
+  transition: transform .25s ease;
+}
+.gallery-item:hover img{
+  transform: scale(1.06);
+}

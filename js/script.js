@@ -1,13 +1,35 @@
-// js/script.js
+// js/script.js  (Replacement Version)
 
-// 1) 수업용 APOD 미러 JSON URL (README와 동일)
+// 1) APOD 미러 JSON
 const APOD_FEED_URL = 'https://cdn.jsdelivr.net/gh/GCA-Classroom/apod/data.json';
 
-// 2) DOM 참조
+// 2) DOM
 const btn = document.getElementById('getImageBtn');
 const gallery = document.getElementById('gallery');
+const startInput = document.getElementById('startDate');
+const endInput = document.getElementById('endDate');
 
-// 3) 로딩 배너 동적 생성(없으면 만들기)
+// Random Space Fact
+const SPACE_FACTS = [
+  "A day on Venus is longer than a year on Venus.",
+  "Neutron stars can spin over 600 times per second.",
+  "Jupiter’s Great Red Spot is a storm bigger than Earth.",
+  "One million Earths could fit inside the Sun.",
+  "There are more stars in the universe than grains of sand on Earth.",
+  "In space, metal pieces can weld together in a process called cold welding.",
+  "Saturn could float in water—it’s less dense than water."
+];
+
+function showRandomFact(){
+  const box = document.getElementById('spaceFact');
+  if(!box) return;
+  const fact = SPACE_FACTS[Math.floor(Math.random()*SPACE_FACTS.length)];
+  box.textContent = `💡 Did you know? ${fact}`;
+}
+showRandomFact(); // 페이지 로드 때 1회 표시
+
+
+// 3) Loading banner (create once)
 let loading = document.getElementById('loading');
 if (!loading) {
   loading = document.createElement('div');
@@ -20,27 +42,22 @@ if (!loading) {
   container.insertBefore(loading, container.querySelector('.filters').nextSibling);
 }
 
-// 버튼 클릭 이벤트
+// Fetch click
 btn?.addEventListener('click', async () => {
   showLoading('🔄 Loading space photos…');
   clearGallery();
 
   try {
-    // 데이터 fetch + 최소 로딩시간(800ms)을 동시에 기다리기
-    const [list] = await Promise.all([
-      fetchAPOD(),
-      delay(800)  // 최소 0.8초는 로딩 유지
-    ]);
+    const [list] = await Promise.all([fetchAPOD(), delay(800)]);
+    const filtered = filterByDateRange(list, startInput?.value, endInput?.value);
 
-    if (!list.length) {
-      gallery.innerHTML = emptyState('No results found. Please try again later.');
+    if (!filtered.length) {
+      gallery.innerHTML = emptyState('No results for that date range.');
       return;
     }
 
-    // 최신 날짜가 위로 오도록 정렬
-    list.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    renderGallery(list);
+    filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+    renderGallery(filtered);
   } catch (err) {
     console.error(err);
     gallery.innerHTML = errorState('Could not load the APOD feed. Please try again.');
@@ -49,33 +66,37 @@ btn?.addEventListener('click', async () => {
   }
 });
 
-// === 유틸: 최소 지연 함수 ===
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+// Utils
+function delay(ms){ return new Promise(r => setTimeout(r, ms)); }
 
-// ===== 데이터 =====
+// Data
 async function fetchAPOD() {
   const res = await fetch(APOD_FEED_URL, { cache: 'no-store' });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
-
-  // 배열 혹은 {results: []} 모두 대응
   const arr = Array.isArray(data) ? data : (Array.isArray(data.results) ? data.results : []);
-  // 미디어 URL이 전혀 없는 항목 제외
   return arr.filter(item => item && (item.url || item.hdurl || item.thumbnail_url));
 }
 
-// ===== 갤러리 =====
-function clearGallery() {
-  gallery.innerHTML = '';
+// Date filter
+function filterByDateRange(list, start, end) {
+  if (!start && !end) return list;
+  const s = start ? new Date(start) : null;
+  const e = end ? new Date(end) : null;
+  return list.filter(it => {
+    const d = new Date(it.date);
+    if (Number.isNaN(d)) return false;
+    return (!s || d >= s) && (!e || d <= e);
+  });
 }
+
+// Gallery
+function clearGallery(){ gallery.innerHTML = ''; }
 
 function renderGallery(items) {
   const frag = document.createDocumentFragment();
-
   items.forEach(item => {
-    const { title, date, media_type, url, thumbnail_url } = item;
+    const { title, date, media_type, url, thumbnail_url, hdurl } = item;
 
     const card = document.createElement('article');
     card.className = 'gallery-item';
@@ -85,14 +106,13 @@ function renderGallery(items) {
 
     const imgWrap = document.createElement('div');
 
-    if (media_type === 'image' && (url || item.hdurl)) {
+    if (media_type === 'image' && (url || hdurl)) {
       const img = document.createElement('img');
-      img.src = url || item.hdurl; // 카드 썸네일은 가볍게 url 우선
+      img.src = url || hdurl;
       img.alt = title || 'Astronomy Picture';
       img.loading = 'lazy';
       imgWrap.appendChild(img);
-    } else if (media_type === 'video' && (thumbnail_url || url)) {
-      // README 권장: 비디오에 썸네일이 있으면 썸네일 보여주기
+    } else if (media_type === 'video') {
       if (thumbnail_url) {
         const img = document.createElement('img');
         img.src = thumbnail_url;
@@ -116,27 +136,21 @@ function renderGallery(items) {
     meta.innerHTML = `<strong>${escapeHTML(title || 'Untitled')}</strong><br><small>${formatDate(date)}</small>`;
 
     card.append(imgWrap, meta);
-
-    // 클릭/키보드로 모달 열기
     card.addEventListener('click', () => openModal(item));
-    card.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        openModal(item);
-      }
+    card.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal(item); }
     });
 
     frag.appendChild(card);
   });
-
   gallery.appendChild(frag);
 }
 
-// ===== 모달 =====
+// Modal
 let modalRoot = null;
 
 function openModal(item) {
-  closeModal(); // 중복 방지
+  closeModal();
 
   modalRoot = document.createElement('div');
   modalRoot.className = 'modal-root';
@@ -172,23 +186,41 @@ function openModal(item) {
 
   if (item.media_type === 'image' && (item.hdurl || item.url)) {
     const img = document.createElement('img');
-    img.src = item.hdurl || item.url; // 모달은 큰 이미지 우선
+    img.src = item.hdurl || item.url;
     img.alt = item.title || 'Astronomy Picture';
     body.appendChild(img);
+
   } else if (item.media_type === 'video' && item.url) {
+    // Robust video embed
+    const embed = toEmbeddableURL(item.url);
+
     const iframe = document.createElement('iframe');
-    iframe.src = toEmbeddableURL(item.url);
+    iframe.src = embed;
     iframe.title = item.title || 'APOD video';
-    iframe.allowFullscreen = true;
+    iframe.setAttribute('allowfullscreen', '');
+    iframe.setAttribute('allow',
+      'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share'
+    );
+    // 강화된 보안/호환 속성
+    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-presentation');
+    iframe.referrerPolicy = 'strict-origin-when-cross-origin';
     iframe.loading = 'lazy';
     body.appendChild(iframe);
 
+    // 확실한 새 탭 열기 버튼
+    const openBtn = document.createElement('button');
+    openBtn.className = 'modal-close';
+    openBtn.textContent = 'Open Video in New Tab';
+    openBtn.addEventListener('click', () => {
+      window.open(item.url, '_blank', 'noopener,noreferrer');
+    });
+    body.appendChild(openBtn);
+
     const note = document.createElement('p');
     note.className = 'modal-note';
-    note.innerHTML = `If the video doesn't load, <a href="${escapeAttr(
-      item.url
-    )}" target="_blank" rel="noopener noreferrer">open it in a new tab</a>.`;
+    note.textContent = "If the player doesn't load here, use the button above to watch it on YouTube.";
     body.appendChild(note);
+
   } else {
     const p = document.createElement('p');
     p.textContent = 'No media available.';
@@ -204,77 +236,66 @@ function openModal(item) {
   modalRoot.append(overlay, dialog);
   document.body.appendChild(modalRoot);
 
-  // 바깥 클릭 닫기
   overlay.addEventListener('click', closeModal);
-
-  // ESC 닫기
   document.addEventListener('keydown', escCloseOnce, { once: true });
-
-  // 접근성: 닫기 버튼 포커스
   setTimeout(() => closeBtn.focus(), 0);
 }
 
-function escCloseOnce(e) {
-  if (e.key === 'Escape') closeModal();
-}
-
-function closeModal() {
+function escCloseOnce(e){ if (e.key === 'Escape') closeModal(); }
+function closeModal(){
   if (modalRoot && modalRoot.parentNode) {
     modalRoot.parentNode.removeChild(modalRoot);
     modalRoot = null;
   }
 }
 
-// ===== 상태/유틸 =====
-function showLoading(msg = 'Loading…') {
-  loading.textContent = msg;
-  loading.hidden = false;
-}
-function hideLoading() { loading.hidden = true; }
+// Status / helpers
+function showLoading(msg='Loading…'){ loading.textContent = msg; loading.hidden = false; }
+function hideLoading(){ loading.hidden = true; }
+function errorState(msg){ return `<div class="placeholder" role="status">${escapeHTML(msg)}</div>`; }
+function emptyState(msg){ return `<div class="placeholder" role="status">${escapeHTML(msg)}</div>`; }
 
-function errorState(msg) {
-  return `<div class="placeholder" role="status">${escapeHTML(msg)}</div>`;
-}
-function emptyState(msg) {
-  return `<div class="placeholder" role="status">${escapeHTML(msg)}</div>`;
-}
-
-function formatDate(iso) {
+function formatDate(iso){
   try {
     const d = new Date(iso);
-    return d.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: '2-digit',
-    });
-  } catch {
-    return iso || '';
-  }
+    return d.toLocaleDateString(undefined,{ year:'numeric', month:'short', day:'2-digit' });
+  } catch { return iso || ''; }
 }
 
+// === Robust YouTube embedding (nocookie + more patterns)
 function toEmbeddableURL(url) {
   try {
     const u = new URL(url);
-    if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) {
-      return `https://www.youtube.com/embed/${u.searchParams.get('v')}`;
+
+    // youtube.com → nocookie embed
+    if (u.hostname.includes('youtube.com')) {
+      const v = u.searchParams.get('v');
+      if (v) return `https://www.youtube-nocookie.com/embed/${v}?rel=0&modestbranding=1&playsinline=1`;
+      if (u.pathname.startsWith('/shorts/')) {
+        const id = u.pathname.split('/shorts/')[1];
+        if (id) return `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1&playsinline=1`;
+      }
+      if (u.pathname.startsWith('/embed/')) {
+        const id = u.pathname.split('/embed/')[1];
+        return `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1&playsinline=1`;
+      }
     }
+
+    // youtu.be → nocookie embed
     if (u.hostname === 'youtu.be') {
-      return `https://www.youtube.com/embed${u.pathname}`;
+      const id = u.pathname.replace('/', '');
+      if (id) return `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1&playsinline=1`;
     }
-    // 이미 /embed/ 형식이 온 경우 그대로 사용
-    return url;
+
+    return url; // 변환 불가 시 원본 유지
   } catch {
     return url;
   }
 }
 
-function escapeHTML(s) {
-  return String(s).replace(/[&<>"']/g, (ch) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
+function escapeHTML(s){
+  return String(s).replace(/[&<>"']/g, ch => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
   })[ch]);
 }
-function escapeAttr(s) { return String(s).replace(/"/g, '&quot;'); }
+function escapeAttr(s){ return String(s).replace(/"/g,'&quot;'); }
